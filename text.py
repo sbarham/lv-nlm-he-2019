@@ -335,7 +335,11 @@ def main(args):
     test_data_batch = test_data.create_data_batch(batch_size=args.batch_size,
                                                   device=device,
                                                   batch_first=True)
+    
+    print("Beginning training ...")
+    print("-----------------------------------------")
     for epoch in range(args.epochs):
+        print("Epoch 1:")
         report_kl_loss = report_rec_loss = 0
         report_num_words = report_num_sents = 0
         for i in np.random.permutation(len(train_data_batch)):
@@ -377,6 +381,7 @@ def main(args):
 
                 batch_data_enc = train_data_batch[id_]
 
+                # every 15 iterations, check if the 
                 if sub_iter % 15 == 0:
                     burn_cur_loss = burn_cur_loss / burn_num_words
                     if burn_pre_loss - burn_cur_loss < 0:

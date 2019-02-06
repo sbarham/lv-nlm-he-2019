@@ -26,7 +26,7 @@ class VAE(nn.Module):
         """
         Returns: Tensor1, Tensor2
             Tensor1: the tensor latent z with shape [batch, nsamples, nz]
-            Tensor2: the tenor of KL for each x with shape [batch]
+            Tensor2: the tensor of KL for each x with shape [batch]
         """
         return self.encoder.encode(x, nsamples)
 
@@ -36,11 +36,11 @@ class VAE(nn.Module):
             Tensor1: the mean of latent z with shape [batch, nz]
             Tensor2: the logvar of latent z with shape [batch, nz]
         """
-
         return self.encoder(x)
 
     def decode(self, z, deterministic):
-        """generate samples from z (perhaps beam search ?)
+        """
+        Generate samples from z (perhaps beam search ?)
         """
 
         return self.decoder.decode(z, deterministic)
@@ -54,7 +54,7 @@ class VAE(nn.Module):
                 the data tensor and length list
 
         Returns: Tensor1, Tensor2, Tensor3
-            Tensor1: total loss [batch]
+            Tensor1: total loss (ELBO) [batch]
             Tensor2: reconstruction loss shape [batch]
             Tensor3: KL loss shape [batch]
         """
@@ -68,7 +68,8 @@ class VAE(nn.Module):
         return reconstruct_err + kl_weight * KL, reconstruct_err, KL
 
     def nll_iw(self, x, nsamples, ns=100):
-        """compute the importance weighting estimate of the log-likelihood
+        """
+        Compute the importance weighting estimate of the log-likelihood
         Args:
             x: if the data is constant-length, x is the data tensor with
                 shape (batch, *). Otherwise x is a tuple that contains
@@ -104,7 +105,8 @@ class VAE(nn.Module):
         return KL
 
     def eval_prior_dist(self, zrange):
-        """perform grid search to calculate the true posterior
+        """
+        Perform grid search to calculate the true posterior
         Args:
             zrange: tensor
                 different z points that will be evaluated, with
@@ -115,7 +117,8 @@ class VAE(nn.Module):
         return self.prior.log_prob(zrange).sum(dim=-1)
 
     def eval_complete_ll(self, x, z):
-        """compute log p(z,x)
+        """
+        Compute log p(z,x)
         Args:
             x: Tensor
                 input with shape [batch, seq_len]
@@ -166,7 +169,8 @@ class VAE(nn.Module):
         return log_posterior
 
     def sample_from_inference(self, x, nsamples=1):
-        """perform sampling from inference net
+        """
+        Perform sampling from inference net
         Returns: Tensor
             Tensor: samples from infernece nets with
                 shape (batch_size, nsamples, nz)
@@ -175,7 +179,8 @@ class VAE(nn.Module):
 
 
     def sample_from_posterior(self, x, nsamples):
-        """perform MH sampling from model posterior
+        """
+        Perform MH sampling from model posterior
         Returns: Tensor
             Tensor: samples from model posterior with
                 shape (batch_size, nsamples, nz)
@@ -213,7 +218,8 @@ class VAE(nn.Module):
         return torch.cat(samples, dim=1)
 
     def calc_model_posterior_mean(self, x, grid_z):
-        """compute the mean value of model posterior, i.e. E_{z ~ p(z|x)}[z]
+        """
+        Compute the mean value of model posterior, i.e. E_{z ~ p(z|x)}[z]
         Args:
             grid_z: different z points that will be evaluated, with
                     shape (k^2, nz), where k=(zmax - zmin)/pace
@@ -241,8 +247,6 @@ class VAE(nn.Module):
 
         return mean
 
-
-
     def eval_inference_dist(self, x, z, param=None):
         """
         Returns: Tensor
@@ -252,7 +256,8 @@ class VAE(nn.Module):
         return self.encoder.eval_inference_dist(x, z, param)
 
     def calc_mi_q(self, x):
-        """Approximate the mutual information between x and z
+        """
+        Approximate the mutual information between x and z
         under distribution q(z|x)
 
         Args:

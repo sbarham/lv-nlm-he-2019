@@ -11,9 +11,9 @@ class LSTMEncoder(GaussianEncoderBase):
     """Gaussian LSTM Encoder with constant-length input"""
     def __init__(self, args, vocab_size, model_init, emb_init):
         super(LSTMEncoder, self).__init__()
-        self.ni = args.ni
-        self.nh = args.enc_nh
-        self.nz = args.nz
+        self.ni = args.ni # embedding size
+        self.nh = args.enc_nh # hidden size
+        self.nz = args.nz # latent size
 
         self.embed = nn.Embedding(vocab_size, args.ni)
 
