@@ -18,6 +18,8 @@ from torch import nn, optim
 from data import MonoTextData
 from modules import VAE
 from modules import LSTMEncoder, LSTMDecoder
+from utils.sample import test_generation
+from utils.create import create_corpus, create_model
 
 clip_grad = 5.0
 decay_epoch = 2
@@ -211,183 +213,6 @@ def calc_au(model, test_data_batch, delta=0.01):
 
     return (au_var >= delta).sum().item(), au_var
 
-
-############################################
-#             SAMPLING CODE                #
-############################################
-
-def test_generation(vae, vocab, args, epoch):
-    vae.eval()
-    
-    # create the header
-    header = ["-------------------------------------------------\n"]
-    header.append("            Samples from Epoch {}                \n".format(epoch + 1))
-    header.append("-------------------------------------------------\n\n")
-    
-    # initialize the samples list
-    samples = header
-    
-    # first get some sentences sampled from the prior
-    samples += sample_sentences(vae, vocab, args)
-    
-    # then get a warm interpolation (warm = between corpus sentence embeddings,
-    # i.e., z's sampled from two posterior distributions)
-    
-    # then get a cold interpolation (cold = between z's sampled from the prior)
-    
-    # then get sentence reconstructions
-    
-    # write the results to file
-    file_name = 'samples_epoch{}'.format(epoch)
-    file_path = os.path.join(args.save_dir, file_name)
-    with open(file_path, 'w') as file:
-        file.writelines(samples)
-
-def sample_sentences(vae, vocab, args):
-    vae.eval()
-    sampled_sents = []
-    device = args.device
-    
-    for i in range(args.num_sentences):
-        # sample z from the prior
-        z = vae.sample_from_prior(1)
-        z = z.view(1,1,-1)
-        
-        # get the start symbol and end symbol
-        start = vocab.word2id['<s>']
-        START = torch.tensor([[start]])
-        end = vocab.word2id['</s>']
-        
-        # send both to the proper device
-        START = START.to(device)
-        z = z.to(device)
-        
-        # decode z into a sentence
-        sentence = vae.decoder.sample_text(START, z, end, device)
-        
-        # perform idx2word ("decode_sentence") on the sentences and ...
-        decoded_sentence = vocab.decode_sentence(sentence)
-        
-        # append to sampled_sents
-        sampled_sents.append(decoded_sentence)
-    
-    # create the header
-    header = ["Samples from the prior:\n"]
-    header.append("-------------------------------------------------------\n")
-    
-    # join the word-strings for each sentence clean up the results
-    res = header
-    for i, sent in enumerate(sampled_sents):
-        # join the words together with space, then clean it up
-        line = ' '.join(sent)
-        line = clean_sample(line) + '\n'
-        
-        # prepend the number of the sample
-        line = '{}:\t'.format(i + 1) + line
-        res.append(line)
-        
-    res += ["\n\n"]
-        
-    # return the list of sample strings
-    return res
-
-def get_random(datasets, args):
-    device = args.device
-    
-    s_rand_idx = random.randint(0, len(datasets['test']) - 1)    
-    s_rand = torch.tensor([datasets['test'][s_rand_idx]['input']], device=device)
-    s_rand_len = torch.tensor([datasets['test'][s_rand_idx]['length']], device=device)
-    
-    return s_rand, s_rand_len
-
-def get_random_short(datasets, args):
-    device = args.device
-    
-    # warm up -- get a stochastic average of length, and a stochastic max
-    running_length = 0
-    running_min = 0
-    for i in range(args.sample_warmup_period):
-        s_rand_idx = random.randint(0, len(datasets['test']) - 1)
-        s_rand_length = datasets['test'][s_rand_idx]['length']
-        running_length += s_rand_length
-        if s_rand_length < running_min:
-            running_min = s_rand_length
-    
-    # we want only sentences whose length is roughly in the fourth quartile
-    avg_length = running_length / args.sample_warmup_period
-    max_length = (avg_length + running_min) / 2
-    
-    # find an appropriate sentence
-    while True:
-        s_rand_idx = random.randint(0, len(datasets['test']) - 1)
-        s_rand_length = datasets['test'][s_rand_idx]['length']
-        
-        if s_rand_length < max_length:
-            s_short = torch.tensor([datasets['test'][s_rand_idx]['input']], device=device)
-            s_short_len = torch.tensor([s_rand_length], device=device)
-            return s_short, s_short_len
-        
-def get_random_long(datasets, args):
-    device = args.device
-    
-    # warm up -- get a stochastic average of length, and a stochastic max
-    running_length = 0
-    running_max = 0
-    for i in range(args.sample_warmup_period):
-        s_rand_idx = random.randint(0, len(datasets['test']) - 1)
-        s_rand_length = datasets['test'][s_rand_idx]['length']
-        running_length += s_rand_length
-        if s_rand_length > running_max:
-            running_max = s_rand_length
-    
-    # we want only sentences whose length is roughly in the fourth quartile
-    avg_length = running_length / args.sample_warmup_period
-    min_length = (avg_length + running_max) / 2
-    
-    # find an appropriate sentence
-    while True:
-        s_rand_idx = random.randint(0, len(datasets['test']) - 1)
-        s_rand_length = datasets['test'][s_rand_idx]['length']
-        
-        if s_rand_length > min_length:
-            s_long = torch.tensor([datasets['test'][s_rand_idx]['input']], device=device)
-            s_long_len = torch.tensor([s_rand_length], device=device)
-            return s_long, s_long_len
-        
-def clean_sample(line):
-    # left and right strip the line
-    line = line.strip()
-    
-    # remove leading or trailing reserved symbol
-    if line.startswith('<sos>'):
-        line = line[5:]
-    if line.endswith('<eos>'):
-        line = line[:-5]
-        
-    # again left and right strip the line
-    line = line.strip()
-    
-    # fix the punctuation
-    line = clean_punctuation(line)
-    
-    return line
-
-def clean_punctuation(line):
-    # remove space around colons between numbers
-    num_colon = re.compile(r'(\d+)\s+:\s+(\d+)')
-    line = num_colon.sub(r"\1:\2", line)
-    
-    # remove space before commas, colons, and periods
-    line = re.sub(r"\s+(,|:|\.)\s+", r"\1 ", line)
-    
-    # remove space around apostrophes
-    line = re.sub(r"\s+'\s+", r"'", line)
-    
-    # remove space before final periods
-    line = re.sub(r"\s+\.", r".", line)
-    
-    return line
-
 def visualize_latent(args, vae, device, test_data):
     f = open('yelp_embeddings_z','w')
     g = open('yelp_embeddings_labels','w')
@@ -410,6 +235,8 @@ def visualize_latent(args, vae, device, test_data):
         print(logvar.size())
         # fooo
 
+def divider():
+    print("----------------------------------------------")
 
 
 ###############################################
@@ -417,55 +244,29 @@ def visualize_latent(args, vae, device, test_data):
 ###############################################
 
 def main(args):
-
-    class uniform_initializer(object):
-        def __init__(self, stdv):
-            self.stdv = stdv
-        def __call__(self, tensor):
-            nn.init.uniform_(tensor, -self.stdv, self.stdv)
-
-
-    class xavier_normal_initializer(object):
-        def __call__(self, tensor):
-            nn.init.xavier_normal_(tensor)
-
-    if args.cuda:
-        print('using cuda')
-
+    divider()
+    print("Using args:")
     print(args)
+    divider()
 
-    opt_dict = {"not_improved": 0, "lr": 1., "best_loss": 1e4}
-
-    train_data = MonoTextData(args.train_data, label=args.label)
-
-    vocab = train_data.vocab
-    vocab_size = len(vocab)
-
-    val_data = MonoTextData(args.val_data, label=args.label, vocab=vocab)
-    test_data = MonoTextData(args.test_data, label=args.label, vocab=vocab)
-
-    print('Train data: %d samples' % len(train_data))
-    print('finish reading datasets, vocab size is %d' % len(vocab))
-    print('dropped sentences: %d' % train_data.dropped)
-    sys.stdout.flush()
-
-    log_niter = (len(train_data)//args.batch_size)//10
-
-    model_init = uniform_initializer(0.01)
-    emb_init = uniform_initializer(0.1)
-
-    if args.enc_type == 'lstm':
-        encoder = LSTMEncoder(args, vocab_size, model_init, emb_init)
-        args.enc_nh = args.dec_nh
-    else:
-        raise ValueError("the specified encoder type is not supported")
-
-    decoder = LSTMDecoder(args, vocab, model_init, emb_init)
-
+    # select device and signal if using cuda or no
     device = torch.device("cuda" if args.cuda else "cpu")
     args.device = device
-    vae = VAE(encoder, decoder, args).to(device)
-
+    if args.cuda:
+        print('Using cuda')
+    
+    # prepare dataset, splits, and vocab
+    data, vocab = create_corpus(args)
+    args.vocab_size = len(vocab)
+    train_data, val_data, test_data = data
+    
+    # create model
+    vae = create_model(args, vocab)
+    divider()
+    print("Model:")
+    print(vae)
+    divider()
+    
     if args.eval:
         print('begin evaluation')
         vae.load_state_dict(torch.load(args.load_path))
@@ -487,10 +288,12 @@ def main(args):
 
         return
 
+    # miscellaneous initializations
+    log_niter = (len(train_data)//args.batch_size)//10
+    opt_dict = {"not_improved": 0, "lr": 1., "best_loss": 1e4}
     enc_optimizer = optim.SGD(vae.encoder.parameters(), lr=1.0, momentum=args.momentum)
     dec_optimizer = optim.SGD(vae.decoder.parameters(), lr=1.0, momentum=args.momentum)
     opt_dict['lr'] = 1.0
-
     iter_ = decay_cnt = 0
     best_loss = 1e4
     best_kl = best_nll = best_ppl = 0
@@ -498,10 +301,10 @@ def main(args):
     aggressive_flag = True if args.aggressive else False
     vae.train()
     start = time.time()
-
     kl_weight = args.kl_start
     anneal_rate = (1.0 - args.kl_start) / (args.warm_up * (len(train_data) / args.batch_size))
 
+    # put data in batches
     train_data_batch = train_data.create_data_batch(batch_size=args.batch_size,
                                                     device=device,
                                                     batch_first=True)
@@ -514,6 +317,7 @@ def main(args):
                                                   device=device,
                                                   batch_first=True)
     
+    # begin the training loop
     print("Beginning training ...")
     print("-----------------------------------------")
     for epoch in range(args.epochs):
