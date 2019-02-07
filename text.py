@@ -218,7 +218,14 @@ def calc_au(model, test_data_batch, delta=0.01):
 
 def test_generation(vae, vocab, args, epoch):
     vae.eval()
-    samples = []
+    
+    # create the header
+    header = ["-------------------------------------------------\n"]
+    header.append("            Samples from Epoch {}                \n".format(epoch + 1))
+    header.append("-------------------------------------------------\n\n")
+    
+    # initialize the samples list
+    samples = header
     
     # first get some sentences sampled from the prior
     samples += sample_sentences(vae, vocab, args)
@@ -264,13 +271,22 @@ def sample_sentences(vae, vocab, args):
         # append to sampled_sents
         sampled_sents.append(decoded_sentence)
     
+    # create the header
+    header = ["Samples from the prior:\n"]
+    header.append("-------------------------------------------------------\n")
+    
     # join the word-strings for each sentence clean up the results
-    res = []
+    res = header
     for i, sent in enumerate(sampled_sents):
-        line = str(i)
-        line += ' '.join(line)
+        # join the words together with space, then clean it up
+        line = ' '.join(sent)
         line = clean_sample(line) + '\n'
+        
+        # prepend the number of the sample
+        line = '{}:\t'.format(i + 1) + line
         res.append(line)
+        
+    res += ["\n\n"]
         
     # return the list of sample strings
     return res
@@ -658,7 +674,9 @@ def main(args):
                 loss, nll, kl, ppl, _ = test(vae, test_data_batch, "TEST", args)
 
         if epoch % args.sample_every == 0:
+            print("Generating samples for epoch #{} ...".format(epoch + 1))
             test_generation(vae, vocab, args, epoch)
+            print("... sample generation successful")
                 
         vae.train()
 
