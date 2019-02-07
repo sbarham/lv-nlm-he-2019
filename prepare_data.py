@@ -3,6 +3,7 @@ import requests
 import tarfile
 import os
 import random
+from collections import Counter
 
 # nltk
 import nltk
@@ -10,6 +11,15 @@ import nltk.corpus as corpus
 nltk.download("brown")
 
 RANDOM_SEED = 911
+BROWN_VOCAB_SIZE = 20_000
+
+def create_vocab():
+    sents = corpus.brown.sents()
+    words = [word for sent in sents for word in sent]
+    vocab = Counter(words).most_common(BROWN_VOCAB_SIZE)
+    vocab = [word[0] for word in vocab]
+    
+    return vocab
 
 def create_brown_data():
     random.seed(RANDOM_SEED)
@@ -18,9 +28,14 @@ def create_brown_data():
     test_file = open('datasets/brown_data/brown.test.txt', 'w')
     valid_file = open('datasets/brown_data/brown.valid.txt', 'w')
 
+    vocab = create_vocab()
+    
     train_perc = 0.8
 
-    for sent in corpus.brown.sents():    
+    for sent in corpus.brown.sents():
+        # replace out-of-vocab words with '_UNK'
+        sent = [word if word in vocab else '_UNK' for word in sent]
+        
         # join the words using ' ', strip extraneous whitespace, and add a \n
         sent = ' '.join(sent)
         sent = sent.strip()

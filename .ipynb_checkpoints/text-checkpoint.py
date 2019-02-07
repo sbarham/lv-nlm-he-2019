@@ -319,7 +319,6 @@ def main(args):
     
     # begin the training loop
     print("Beginning training ...")
-    print("-----------------------------------------")
     for epoch in range(args.epochs):
         print("Epoch %d:" % epoch)
         report_kl_loss = report_rec_loss = 0

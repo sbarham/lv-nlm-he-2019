@@ -14,7 +14,5 @@ params={
     'train_data': 'datasets/yelp_data/yelp.train.txt',
     'val_data': 'datasets/yelp_data/yelp.valid.txt',
     'test_data': 'datasets/yelp_data/yelp.test.txt',
-    'label': False,
-    'sample_every_epoch': True,
-    'sample_size': 10
+    'label': False
 }

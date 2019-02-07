@@ -14,5 +14,5 @@ params={
     'train_data': 'datasets/brown_data/brown.train.txt',
     'val_data': 'datasets/brown_data/brown.valid.txt',
     'test_data': 'datasets/brown_data/brown.test.txt',
-    'label':True
+    'label': False
 }
