@@ -1,6 +1,42 @@
+# python
 import requests
 import tarfile
 import os
+import random
+
+# nltk
+import nltk
+import nltk.corpus as corpus
+nltk.download("brown")
+
+def create_brown_data():
+    train_file = open('datasets/brown_data/brown.train.txt', 'w')
+    test_file = open('datasets/brown_data/brown.test.txt', 'w')
+    valid_file = open('datasets/brown_data/brown.valid.txt', 'w')
+
+    train_perc = 0.8
+
+    for sent in corpus.brown.sents():    
+        # join the words using ' ', strip extraneous whitespace, and add a \n
+        sent = ' '.join(sent)
+        sent = sent.strip()
+        sent += '\n'
+
+        # prepend 0\t, since the code seems to require it
+        sent = '0\t' + sent
+
+        choice = random.uniform(0, 1)
+
+        if choice < train_perc:
+            train_file.write(sent)
+        elif choice < (train_perc + 0.1):
+            test_file.write(sent)
+        else:
+            valid_file.write(sent)
+
+    train_file.close()
+    test_file.close()
+    valid_file.close()
 
 def download_file_from_google_drive(id, destination):
     URL = "https://docs.google.com/uc?export=download"
@@ -36,7 +72,11 @@ if __name__ == "__main__":
     destination = "datasets.tar.gz"
     download_file_from_google_drive(file_id, destination)
 
+    # theirs
     tar = tarfile.open(destination, "r:gz")
     tar.extractall()
     tar.close()
     os.remove(destination)
+    
+    # our brown data
+    create_brown_data()
