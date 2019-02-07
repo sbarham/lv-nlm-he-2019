@@ -9,7 +9,11 @@ import nltk
 import nltk.corpus as corpus
 nltk.download("brown")
 
+RANDOM_SEED = 911
+
 def create_brown_data():
+    random.seed(RANDOM_SEED)
+    
     train_file = open('datasets/brown_data/brown.train.txt', 'w')
     test_file = open('datasets/brown_data/brown.test.txt', 'w')
     valid_file = open('datasets/brown_data/brown.valid.txt', 'w')
