@@ -122,6 +122,16 @@ def main(args):
     # load the desired state dict
     load_model(vae, args)
     
+    # generate samples
+    test_generation(vae, vocab, args, None)
+    
+    # report success and exit
+    divider()
+    print("Sampling successful!")
+    print("Exiting ...")
+    divider()
+    print()
+    
 if __name__ == '__main__':
     args = init_config()
     main(args)

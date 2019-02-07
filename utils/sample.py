@@ -31,7 +31,12 @@ def test_generation(vae, vocab, args, epoch):
     vae.eval()
     
     # initalize the header
-    header = ['Samples generated at the end of Epoch {}'.format(epoch)]
+    header = None
+    if epoch is None:
+        header = ['Samples generated from model at {}\n'.format(args.model_path)]
+    else:
+        header = ['Samples generated at the end of Epoch {}\n'.format(epoch)]
+    
     header.append(DIVIDER)
     header.append('\n')
     
@@ -49,7 +54,12 @@ def test_generation(vae, vocab, args, epoch):
     # then get sentence reconstructions
     
     # write the results to file
-    file_name = 'samples_epoch{}'.format(epoch)
+    file_name = None
+    if epoch is None:
+        file_name = '{}_test_samples'.format(args.dataset)
+    else:
+        file_name = 'samples_epoch{}'.format(epoch)
+    
     file_path = os.path.join(args.save_dir, file_name)
     with open(file_path, 'w') as file:
         file.writelines(samples)
