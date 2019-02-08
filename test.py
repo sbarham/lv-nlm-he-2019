@@ -4,6 +4,7 @@ import os
 import re
 import importlib
 import sys
+import random
 
 # torch
 import torch
@@ -24,8 +25,30 @@ def init_config():
     parser.add_argument('--dataset', type=str, required=True, help='dataset to use')
 
     # sampling constants
-    parser.add_argument('--num-sentences', type=int, default=10, help='number of sentences to sample at sample time')
-    parser.add_argument('--sample-every', type=int, default=1, help='number of epochs between sample-file generation')
+    parser.add_argument(
+        '--num-sentences',
+        type=int,
+        default=10,
+        help='number of sentences to sample at sample time'
+    )
+    parser.add_argument(
+        '--sample-every',
+        type=int,
+        default=1,
+        help='number of epochs between sample-file generation'
+    )
+    parser.add_argument(
+        '--num-reconstructions',
+        type=int,
+        default=5,
+        help='number of sentences in each category (short, avg, long) to reconstruct'
+    )
+    parser.add_argument(
+        '--sample-warmup-period',
+        type=int,
+        default=500,
+        help='number of sentences to sample in order to determine min/mean/max length of sequences in dataset'
+    )
     
     # get the args object
     args = parser.parse_args()
@@ -123,7 +146,7 @@ def main(args):
     load_model(vae, args)
     
     # generate samples
-    test_generation(vae, vocab, args, None)
+    test_generation(vae, vocab, args, test_data.data, None)
     
     # report success and exit
     divider()
